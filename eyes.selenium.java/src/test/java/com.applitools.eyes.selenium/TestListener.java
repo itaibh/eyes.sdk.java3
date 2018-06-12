@@ -35,13 +35,19 @@ public class TestListener implements ITestListener {
     @Override
     public void onTestSuccess(ITestResult result) {
         //System.out.println("onTestSuccess");
-        afterMethod((TestSetup) result.getInstance());
+        Object instance = result.getInstance();
+        if (instance instanceof TestSetup) {
+            afterMethod((TestSetup)instance);
+        }
     }
 
     @Override
     public void onTestFailure(ITestResult result) {
         //System.out.println("onTestFailure");
-        afterMethod((TestSetup) result.getInstance());
+        Object instance = result.getInstance();
+        if (instance instanceof TestSetup) {
+            afterMethod((TestSetup)instance);
+        }
     }
 
     @Override
