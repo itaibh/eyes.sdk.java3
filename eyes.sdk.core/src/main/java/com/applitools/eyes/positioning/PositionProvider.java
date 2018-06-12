@@ -17,8 +17,9 @@ public interface PositionProvider {
     /**
      * Go to the specified location.
      * @param location The location to set.
+     * @return The actual location the provider scrolled to.
      */
-    void setPosition(Location location);
+    Location setPosition(Location location);
 
     /**
      *

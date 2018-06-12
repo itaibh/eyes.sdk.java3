@@ -45,7 +45,7 @@ public class ScrollPositionProvider implements PositionProvider {
      * Go to the specified location.
      * @param location The position to scroll to.
      */
-    public void setPosition(Location location) {
+    public Location setPosition(Location location) {
         logger.verbose("ScrollPositionProvider - Scrolling to " + location);
         Object retVal = executor.executeScript(
                 String.format("window.scrollTo(%d,%d); return [window.scrollX, window.scrollY];",
@@ -55,6 +55,7 @@ public class ScrollPositionProvider implements PositionProvider {
                 esAsList.get(0).intValue(),
                 esAsList.get(1).intValue());
         logger.verbose("ScrollPositionProvider - Done scrolling!");
+        return actualLocation;
     }
 
     /**

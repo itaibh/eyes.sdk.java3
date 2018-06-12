@@ -49,11 +49,12 @@ public class CssTranslatePositionProvider implements PositionProvider {
         return lastSetPosition;
     }
 
-    public void setPosition(Location location) {
+    public Location setPosition(Location location) {
         ArgumentGuard.notNull(location, "location");
         logger.verbose("CssTranslatePositionProvider - Setting position to: " + location);
         executor.executeScript(String.format(JSSetTransform, "translate(-" + location.getX() + "px, -" + location.getY() + "px)"), scrollRootElement);
         lastSetPosition = location;
+        return lastSetPosition;
     }
 
     public RectangleSize getEntireSize() {
