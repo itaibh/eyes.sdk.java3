@@ -229,7 +229,6 @@ public class EyesWebDriver implements HasCapabilities, HasInputDevices,
     }
 
     public TargetLocator switchTo() {
-        logger.verbose("switchTo()");
         return new EyesTargetLocator(logger, this, driver.switchTo());
     }
 

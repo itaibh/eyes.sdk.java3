@@ -1,6 +1,7 @@
 package com.applitools.eyes.selenium.wrappers;
 
 import com.applitools.eyes.*;
+import com.applitools.eyes.positioning.PositionProvider;
 import com.applitools.eyes.triggers.MouseAction;
 import com.applitools.utils.ArgumentGuard;
 import com.google.common.collect.ImmutableMap;
@@ -17,6 +18,7 @@ public class EyesRemoteWebElement extends RemoteWebElement {
     private final Logger logger;
     private final EyesWebDriver eyesDriver;
     private final RemoteWebElement webElement;
+    private PositionProvider positionProvider;
     private Method executeMethod;
 
     private final String JS_GET_COMPUTED_STYLE_FORMATTED_STR =
@@ -36,6 +38,9 @@ public class EyesRemoteWebElement extends RemoteWebElement {
 
     private final String JS_GET_SCROLL_TOP =
             "return arguments[0].scrollTop;";
+
+    private final String JS_GET_SCROLL_POSITION =
+            "return [arguments[0].scrollLeft, arguments[0].scrollTop];";
 
     private final String JS_GET_SCROLL_WIDTH =
             "return arguments[0].scrollWidth;";
@@ -150,6 +155,18 @@ public class EyesRemoteWebElement extends RemoteWebElement {
     public int getScrollTop() {
         return (int) Math.ceil(Double.parseDouble(eyesDriver.executeScript(JS_GET_SCROLL_TOP,
                 this).toString()));
+    }
+
+    /**
+     * @return The value of the scrollTop property of the element.
+     */
+    public Location getScrollPosition() {
+        Object retVal = eyesDriver.executeScript(JS_GET_SCROLL_POSITION, this);
+        List<Long> esAsList = (List<Long>) retVal;
+        Location location = new Location(
+                esAsList.get(0).intValue(),
+                esAsList.get(1).intValue());
+        return location;
     }
 
     /**
@@ -520,6 +537,14 @@ public class EyesRemoteWebElement extends RemoteWebElement {
 
     @Override
     public String toString() {
-        return "EyesRemoteWebElement:" + webElement.toString();
+        return String.format("EyesRemoteWebElement: %s (%s)", webElement.getTagName(), webElement.getId());
+    }
+
+    public PositionProvider getPositionProvider() {
+        return positionProvider;
+    }
+
+    public void setPositionProvider(PositionProvider positionProvider) {
+        this.positionProvider = positionProvider;
     }
 }

@@ -8,6 +8,8 @@ import com.applitools.eyes.selenium.exceptions.EyesDriverOperationException;
 import com.applitools.utils.ArgumentGuard;
 import org.openqa.selenium.WebDriverException;
 
+import java.util.List;
+
 public class ScrollPositionProvider implements PositionProvider {
 
 
@@ -45,7 +47,13 @@ public class ScrollPositionProvider implements PositionProvider {
      */
     public void setPosition(Location location) {
         logger.verbose("ScrollPositionProvider - Scrolling to " + location);
-        EyesSeleniumUtils.setCurrentScrollPosition(executor, location);
+        Object retVal = executor.executeScript(
+                String.format("window.scrollTo(%d,%d); return [window.scrollX, window.scrollY];",
+                location.getX(), location.getY()));
+        List<Long> esAsList = (List<Long>) retVal;
+        Location actualLocation = new Location(
+                esAsList.get(0).intValue(),
+                esAsList.get(1).intValue());
         logger.verbose("ScrollPositionProvider - Done scrolling!");
     }
 
