@@ -39,7 +39,7 @@ public class Logger {
         String prefix = "";
         // getStackTrace()<-getPrefix()<-log()/verbose()<-"actual caller"
         if (stackTraceElements.length >= 4) {
-            prefix = stackTraceElements[3].getMethodName() + "(): ";
+            prefix = stackTraceElements[3].getClassName() + "." + stackTraceElements[3].getMethodName() + "(): ";
         }
 
         return prefix;
