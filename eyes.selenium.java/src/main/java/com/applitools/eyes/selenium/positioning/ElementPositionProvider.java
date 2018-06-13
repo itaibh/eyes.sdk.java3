@@ -43,8 +43,7 @@ public class ElementPositionProvider implements PositionProvider {
      */
     public Location setPosition(Location location) {
         logger.verbose(String.format("Scrolling element to %s", location));
-        element.scrollTo(location);
-        return element.getScrollPosition();
+        return element.scrollTo(location);
     }
 
     /**

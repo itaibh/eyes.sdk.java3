@@ -224,10 +224,16 @@ public class EyesRemoteWebElement extends RemoteWebElement {
     /**
      * Scrolls to the specified location inside the element.
      * @param location The location to scroll to.
+     * @return The actual location the element had scrolled to.
      */
-    public void scrollTo(Location location) {
-        eyesDriver.executeScript(String.format(JS_SCROLL_TO_FORMATTED_STR,
-                location.getX(), location.getY()), this);
+    public Location scrollTo(Location location) {
+        Object retVal = eyesDriver.executeScript(String.format(JS_SCROLL_TO_FORMATTED_STR,
+                location.getX(), location.getY()) + JS_GET_SCROLL_POSITION, this);
+        List<Long> esAsList = (List<Long>) retVal;
+        Location actualLocation = new Location(
+                esAsList.get(0).intValue(),
+                esAsList.get(1).intValue());
+        return actualLocation;
     }
 
     /**
@@ -350,9 +356,8 @@ public class EyesRemoteWebElement extends RemoteWebElement {
      */
     private WebElement wrapElement(WebElement elementToWrap) {
         WebElement resultElement = elementToWrap;
-        if (elementToWrap instanceof RemoteWebElement) {
-            resultElement = new EyesRemoteWebElement(logger, eyesDriver,
-                    (RemoteWebElement) elementToWrap);
+        if ((elementToWrap instanceof RemoteWebElement) && !(elementToWrap instanceof  EyesRemoteWebElement)) {
+            resultElement = new EyesRemoteWebElement(logger, eyesDriver, elementToWrap);
         }
         return resultElement;
     }
@@ -362,16 +367,14 @@ public class EyesRemoteWebElement extends RemoteWebElement {
      * EyesRemoteWebElement object. For all other types of WebElement,
      * the function returns the original object.
      */
-    private List<WebElement> wrapElements(List<WebElement>
-                                                  elementsToWrap) {
+    private List<WebElement> wrapElements(List<WebElement> elementsToWrap) {
         // This list will contain the found elements wrapped with our class.
         List<WebElement> wrappedElementsList =
                 new ArrayList<WebElement>(elementsToWrap.size());
 
         for (WebElement currentElement : elementsToWrap) {
             if (currentElement instanceof RemoteWebElement) {
-                wrappedElementsList.add(new EyesRemoteWebElement(logger,
-                        eyesDriver, (RemoteWebElement) currentElement));
+                wrappedElementsList.add(new EyesRemoteWebElement(logger, eyesDriver, currentElement));
             } else {
                 wrappedElementsList.add(currentElement);
             }
