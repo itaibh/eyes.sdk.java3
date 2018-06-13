@@ -61,6 +61,28 @@ public class EyesRemoteWebElement extends RemoteWebElement {
     private final String JS_GET_CLIENT_WIDTH = "return arguments[0].clientWidth;";
     private final String JS_GET_CLIENT_HEIGHT = "return arguments[0].clientHeight;";
 
+    private final String JS_GET_BORDER_WIDTHS =
+            "var retval = retval || []; " +
+            "if (window.getComputedStyle) { " +
+                "var computedStyle = window.getComputedStyle(arguments[0], null);" +
+                "retval.push(" +
+                    "computedStyle.getPropertyValue('border-left-width')," +
+                    "computedStyle.getPropertyValue('border-top-width')," +
+                    "computedStyle.getPropertyValue('border-right-width')," +
+                    "computedStyle.getPropertyValue('border-bottom-width'));" +
+            "} else if (arguments[0].currentStyle) { " +
+                "retval.push(" +
+                    "arguments[0].currentStyle['border-left-width'], " +
+                    "arguments[0].currentStyle['border-top-width'], " +
+                    "arguments[0].currentStyle['border-right-width'], " +
+                    "arguments[0].currentStyle['border-bottom-width']);" +
+            "} else { retval.push(0,0,0,0); }";
+
+    private final String JS_GET_SIZE_AND_BORDER_WIDTHS =
+            "var retval = [arguments[0].clientWidth, arguments[0].clientHeight]; "
+                    + JS_GET_BORDER_WIDTHS +
+            "return retval;";
+
     public EyesRemoteWebElement(Logger logger, EyesWebDriver eyesDriver, WebElement webElement) {
         super();
 
@@ -191,6 +213,24 @@ public class EyesRemoteWebElement extends RemoteWebElement {
 
     public int getClientHeight() {
         return (int) Math.ceil(Double.parseDouble(eyesDriver.executeScript(JS_GET_CLIENT_HEIGHT, this).toString()));
+    }
+
+    public SizeAndBorders getSizeAndBorders() {
+        SizeAndBorders retVal;
+        Object sizeAndBordersData = eyesDriver.executeScript(JS_GET_SIZE_AND_BORDER_WIDTHS, this);
+        if (sizeAndBordersData != null) {
+            List<Integer> data = (List<Integer>) sizeAndBordersData;
+            retVal = new SizeAndBorders(
+                    new RectangleSize(data.get(0), data.get(1)),
+                    new RectangularMargins(data.get(2), data.get(3), data.get(4), data.get(5))
+            );
+        }
+        else
+        {
+            retVal = new SizeAndBorders(RectangleSize.EMPTY, RectangularMargins.EMPTY);
+        }
+
+        return retVal;
     }
 
     /**
