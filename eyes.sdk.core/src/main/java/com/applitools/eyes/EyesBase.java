@@ -1352,6 +1352,7 @@ public abstract class EyesBase {
                 serverConnector,
                 runningSession,
                 matchTimeout,
+                this,
                 // A callback which will call getAppOutput
                 new AppOutputProvider() {
                     @Override
