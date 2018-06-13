@@ -27,9 +27,12 @@ public class TestListener implements ITestListener {
     @Override
     public void onTestStart(ITestResult result) {
         //System.out.println("onTestStart");
-        TestSetup testSetup = ((TestSetup) result.getInstance());
-        Method method = result.getMethod().getConstructorOrMethod().getMethod();
-        testSetup.beforeMethod(method.getName());
+        Object instance = result.getInstance();
+        if (instance instanceof TestSetup) {
+            TestSetup testSetup = ((TestSetup) instance);
+            Method method = result.getMethod().getConstructorOrMethod().getMethod();
+            testSetup.beforeMethod(method.getName());
+        }
     }
 
     @Override
@@ -37,7 +40,7 @@ public class TestListener implements ITestListener {
         //System.out.println("onTestSuccess");
         Object instance = result.getInstance();
         if (instance instanceof TestSetup) {
-            afterMethod((TestSetup)instance);
+            afterMethod((TestSetup) instance);
         }
     }
 
@@ -46,7 +49,7 @@ public class TestListener implements ITestListener {
         //System.out.println("onTestFailure");
         Object instance = result.getInstance();
         if (instance instanceof TestSetup) {
-            afterMethod((TestSetup)instance);
+            afterMethod((TestSetup) instance);
         }
     }
 
@@ -58,7 +61,10 @@ public class TestListener implements ITestListener {
     @Override
     public void onTestFailedButWithinSuccessPercentage(ITestResult result) {
         //System.out.println("onTestFailedButWithinSuccessPercentage");
-        afterMethod((TestSetup) result.getInstance());
+        Object instance = result.getInstance();
+        if (instance instanceof TestSetup) {
+            afterMethod((TestSetup) instance);
+        }
     }
 
     private void afterMethod(TestSetup testSetup) {
