@@ -8,6 +8,7 @@ import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.ClientConfig;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
+import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
 
 import java.io.IOException;
 import java.net.URI;
@@ -46,6 +47,9 @@ public class RestClient {
      */
     public static Client buildRestClient(int timeout,
                                           ProxySettings proxySettings) {
+
+        URLConnectionClientHandler ch  = new URLConnectionClientHandler(new ConnectionFactory(proxySettings));
+
         // Creating the client configuration
         ClientConfig cc = new DefaultClientConfig();
         cc.getProperties().put(ClientConfig.PROPERTY_CONNECT_TIMEOUT, timeout);
@@ -53,7 +57,7 @@ public class RestClient {
 
         // We ignore the proxy settings
 
-        return Client.create(cc);
+        return new Client(ch, cc);
     }
 
     /***
@@ -240,7 +244,7 @@ public class RestClient {
         T resultObject;
         int statusCode = response.getStatus();
         String statusPhrase =
-                response.getClientResponseStatus().getReasonPhrase();
+                ClientResponse.Status.fromStatusCode(response.getStatus()).getReasonPhrase();
         String data = response.getEntity(String.class);
         response.close();
         // Validate the status code.
