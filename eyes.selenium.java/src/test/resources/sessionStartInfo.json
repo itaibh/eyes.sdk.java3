@@ -1,0 +1,39 @@
+{
+  "agentId": "agent",
+  "appIdOrName": "some app",
+  "verId": "1.0",
+  "scenarioIdOrName": "some test",
+  "batchInfo": {
+    "id": "someBatchId",
+    "name": "some batch",
+    "startedAt": "2017-07-29T08:01:00Z"
+  },
+  "baselineEnvName": "baseline",
+  "environmentName": "some environment",
+  "environment": {
+    "OS": "windows",
+    "inferred": null,
+    "hostingApp": "test suite",
+    "displaySize": {
+      "width": 234,
+      "height": 456
+    }
+  },
+  "defaultMatchSettings": {
+    "matchLevel": "STRICT",
+    "exact": null,
+    "ignore": null,
+    "strict": null,
+    "content": null,
+    "layout": null,
+    "Floating": null,
+    "useDom": true,
+    "enablePatterns": false
+  },
+  "branchName": "some branch",
+  "parentBranchName": "parent branch",
+  "baselineBranchName": "baseline branch",
+  "saveDiffs": null,
+  "render": null,
+  "properties": null
+}
