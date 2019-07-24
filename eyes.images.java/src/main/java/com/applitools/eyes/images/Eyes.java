@@ -1,0 +1,870 @@
+/*
+ * Applitools SDK for Selenium integration.
+ */
+package com.applitools.eyes.images;
+
+import com.applitools.ICheckSettings;
+import com.applitools.eyes.*;
+import com.applitools.eyes.config.Configuration;
+import com.applitools.eyes.config.IConfigurationGetter;
+import com.applitools.eyes.config.IConfigurationSetter;
+import com.applitools.eyes.events.ValidationInfo;
+import com.applitools.eyes.events.ValidationResult;
+import com.applitools.eyes.exceptions.TestFailedException;
+import com.applitools.eyes.fluent.CheckSettings;
+import com.applitools.eyes.fluent.ICheckSettingsInternal;
+import com.applitools.eyes.positioning.RegionProvider;
+import com.applitools.eyes.triggers.MouseAction;
+import com.applitools.utils.ArgumentGuard;
+import com.applitools.utils.ImageUtils;
+
+import java.awt.image.BufferedImage;
+
+public class Eyes extends EyesBase implements IConfigurationGetter, IConfigurationSetter {
+
+    private String title;
+    private EyesImagesScreenshot screenshot;
+    private String inferred;
+    private Configuration config = new Configuration();
+
+    /**
+     * Get the base agent id.
+     * @return Base agent id.
+     */
+    @Override
+    public String getBaseAgentId() {
+        return "eyes.images.java/3.156.3";
+    }
+
+    @Override
+    public String tryCaptureDom() {
+        return null;
+    }
+
+    /**
+     * Starts a test.
+     * @param appName    The name of the application under test.
+     * @param testName   The test name.
+     * @param dimensions Determines the resolution used for the baseline.
+     *                   {@code null} will automatically grab the resolution from the image.
+     */
+    public void open(String appName, String testName,
+                     RectangleSize dimensions) throws EyesException{
+        config.setAppName(appName);
+        config.setTestName(testName);
+        config.setViewportSize(dimensions);
+        openBase();
+    }
+
+    /**
+     * ﻿Starts a new test without setting the viewport size of the AUT.
+     * @param appName  The name of the application under test.
+     * @param testName The test name.
+     * @see #open(String, String, RectangleSize)
+     */
+    public void open(String appName, String testName) {
+        config.setAppName(appName);
+        config.setTestName(testName);
+        openBase();
+    }
+
+    public boolean check(String name, ICheckSettings checkSettings) {
+        IImagesCheckTarget imagesCheckTarget = (checkSettings instanceof IImagesCheckTarget) ? (IImagesCheckTarget) checkSettings : null;
+        BufferedImage image = imagesCheckTarget.getImage();
+
+        if (viewportSizeHandler.get() == null) {
+            setViewportSize(new RectangleSize(image.getWidth(), image.getHeight()));
+        }
+
+        return checkImage_(RegionProvider.NULL_INSTANCE, image, name, false, checkSettings);
+    }
+
+    /**
+     * Superseded by {@link #checkImage(java.awt.image.BufferedImage)}.
+     */
+    @Deprecated
+    public boolean checkWindow(BufferedImage image) {
+        return checkImage(image);
+    }
+
+    /** Superseded by {@link #checkImage(java.awt.image.BufferedImage, String)}.
+     */
+    @Deprecated
+    public boolean checkWindow(BufferedImage image, String tag) {
+        return checkImage(image, tag);
+    }
+
+    /**
+     * Superseded by {@link #checkImage(java.awt.image.BufferedImage, String,
+     * boolean)}.
+     */
+    @Deprecated
+    public boolean checkWindow(BufferedImage image, String tag,
+                               boolean ignoreMismatch) {
+        return checkImage(image, tag, ignoreMismatch);
+    }
+
+    /**
+     * See {@link #checkImage(BufferedImage, String)}.
+     * {@code tag} defaults to {@code null}.
+     */
+    public boolean checkImage(BufferedImage image) {
+        return checkImage(image, null);
+    }
+
+    /**
+     * See {@link #checkImage(BufferedImage, String, boolean)}.
+     * {@code ignoreMismatch} defaults to {@code false}.
+     */
+    public boolean checkImage(BufferedImage image, String tag) {
+        return checkImage(image, tag, false);
+    }
+
+    /**
+     * Matches the input image with the next expected image.
+     * @param image          The image to perform visual validation for.
+     * @param tag            An optional tag to be associated with the validation checkpoint.
+     * @param ignoreMismatch True if the server should ignore a negative result for the visual validation.
+     * @return True if the image matched the expected output, false otherwise.
+     * @throws TestFailedException Thrown if a mismatch is detected and immediate failure reports are enabled.
+     */
+    public boolean checkImage(BufferedImage image, String tag,
+                              boolean ignoreMismatch) {
+        if (getIsDisabled()) {
+            logger.verbose(String.format("CheckImage(Image, '%s', %b): Ignored", tag, ignoreMismatch));
+            return false;
+        }
+        ArgumentGuard.notNull(image, "image cannot be null!");
+
+        logger.verbose(String.format("CheckImage(Image, '%s', %b)", tag, ignoreMismatch));
+
+        if (viewportSizeHandler.get() == null) {
+            setViewportSize(new RectangleSize(image.getWidth(), image.getHeight()));
+        }
+
+        return checkImage_(RegionProvider.NULL_INSTANCE, image, tag, ignoreMismatch, new CheckSettings(USE_DEFAULT_TIMEOUT));
+    }
+
+    /**
+     * See {@link #checkImage(String, String)}.
+     * {@code tag} defaults to {@code null}.
+     */
+    public boolean checkImage(String path) {
+        return checkImage(path, null);
+    }
+
+    /**
+     * See {@link #checkImage(String, String, boolean)}.
+     * {@code ignoreMismatch} defaults to {@code false}.
+     * @param path The path to the image to check.
+     * @param tag  The tag to be associated with the visual checkpoint.
+     * @return Whether or not the image matched the baseline.
+     */
+    public boolean checkImage(String path, String tag) {
+        return checkImage(path, tag, false);
+    }
+
+    /**
+     * Matches the image stored in the input file with the next expected image.
+     * <p>
+     * See {@link #checkImage(BufferedImage, String, boolean)}.
+     * @param path           The base64 representation of the image's raw bytes.
+     * @param tag            An optional tag to be associated with the validation checkpoint.
+     * @param ignoreMismatch True if the server should ignore a negative result for the visual validation.
+     * @return Whether or not the image matched the baseline.
+     */
+    public boolean checkImage(String path, String tag, boolean ignoreMismatch) {
+        return checkImage(ImageUtils.imageFromFile(path), tag, ignoreMismatch);
+    }
+
+    /**
+     * See {@link #checkImage(byte[], String)}.
+     * {@code tag} defaults to {@code null}.
+     * @param image The raw png bytes of the image to perform visual validation for.
+     * @return Whether or not the image matched the baseline.
+     */
+    public boolean checkImage(byte[] image) {
+        return checkImage(image, null);
+    }
+
+    /**
+     * See {@link #checkImage(byte[], String, boolean)}.
+     * {@code ignoreMismatch} defaults to {@code false}.
+     * @param image The raw png bytes of the image to perform visual validation for.
+     * @param tag   An optional tag to be associated with the validation checkpoint.
+     * @return Whether or not the image matched the baseline.
+     */
+    public boolean checkImage(byte[] image, String tag) {
+        return checkImage(image, tag, false);
+    }
+
+    /**
+     * Matches the input image with the next expected image.
+     * See {@link #checkImage(BufferedImage, String, boolean)}.
+     * @param image The raw png bytes of the image to perform visual validation for.
+     * @param tag   An optional tag to be associated with the validation checkpoint.
+     * @return Whether or not the image matched the baseline.
+     */
+    public boolean checkImage(byte[] image, String tag, boolean ignoreMismatch) {
+        return checkImage(ImageUtils.imageFromBytes(image), tag, ignoreMismatch);
+    }
+
+    /**
+     * Perform visual validation for the current image.
+     * @param image          The image to perform visual validation for.
+     * @param region         The region to validate within the image.
+     * @param tag            An optional tag to be associated with the validation checkpoint.
+     * @param ignoreMismatch True if the server should ignore a negative result for the visual validation.
+     * @return Whether or not the image matched the baseline.
+     * @throws TestFailedException Thrown if a mismatch is detected and immediate failure reports are enabled.
+     */
+    public boolean checkRegion(BufferedImage image, final Region region, String tag, boolean ignoreMismatch) {
+        if (getIsDisabled()) {
+            logger.verbose(String.format(
+                    "CheckRegion(Image, [%s], '%s', %b): Ignored",
+                    region, tag, ignoreMismatch));
+            return false;
+        }
+        ArgumentGuard.notNull(image, "image cannot be null!");
+        ArgumentGuard.notNull(region, "region cannot be null!");
+
+        logger.verbose(String.format("CheckRegion(Image, [%s], '%s', %b)", region, tag, ignoreMismatch));
+
+        if (viewportSizeHandler.get() == null) {
+            setViewportSize(new RectangleSize(image.getWidth(), image.getHeight()));
+        }
+
+        return checkImage_(new RegionProvider() {
+            public Region getRegion() {
+                return region;
+            }
+        }, image, tag, ignoreMismatch, new CheckSettings(USE_DEFAULT_TIMEOUT));
+    }
+
+    /**
+     * Perform visual validation for a region in a given image. Does not
+     * ignore mismatches.
+     * @param image  The image to perform visual validation for.
+     * @param region The region to validate within the image.
+     * @param tag    An optional tag to be associated with the validation checkpoint.
+     * @throws TestFailedException Thrown if a mismatch is detected and immediate failure reports are enabled.
+     */
+    public void checkRegion(BufferedImage image, Region region, String tag) {
+        checkRegion(image, region, tag, false);
+    }
+
+    /**
+     * Perform visual validation of a region for a given image. Tag is empty and mismatches are not ignored.
+     * @param image  The image to perform visual validation for.
+     * @param region The region to validate within the image.
+     * @throws TestFailedException Thrown if a mismatch is detected and immediate failure reports are enabled.
+     */
+    public void checkRegion(BufferedImage image, Region region) {
+        checkRegion(image, region, null, false);
+    }
+
+    /**
+     * Adds a mouse trigger.
+     * @param action  Mouse action.
+     * @param control The control on which the trigger is activated (context
+     *                relative coordinates).
+     * @param cursor  The cursor's position relative to the control.
+     */
+    public void addMouseTrigger(MouseAction action, Region control, Location cursor) {
+        addMouseTriggerBase(action, control, cursor);
+    }
+
+    /**
+     * Adds a keyboard trigger.
+     * @param control The control's context-relative region.
+     * @param text    The trigger's text.
+     */
+    public void addTextTrigger(Region control, String text) {
+        addTextTriggerBase(control, text);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public RectangleSize getViewportSize() {
+        return viewportSizeHandler.get();
+    }
+
+    @Override
+    public SessionType getSessionType() {
+        return config.getSessionType();
+    }
+
+    @Override
+    public FailureReports getFailureReports() {
+        return config.getFailureReports();
+    }
+
+    /**
+     * Set the viewport size.
+     * @param size The required viewport size.
+     */
+    @Override
+    public IConfigurationSetter setViewportSize(RectangleSize size) {
+        ArgumentGuard.notNull(size, "size");
+        viewportSizeHandler.set(new RectangleSize(size.getWidth(), size.getHeight()));
+        return config;
+    }
+
+    @Override
+    public IConfigurationSetter setSessionType(SessionType sessionType) {
+        config.setSessionType(sessionType);
+        return config;
+    }
+
+    @Override
+    public IConfigurationSetter setFailureReports(FailureReports failureReports) {
+        config.setFailureReports(failureReports);
+        return config;
+    }
+
+    /**
+     * Get the inferred environment.
+     * @return Inferred environment.
+     */
+    @Override
+    protected String getInferredEnvironment() {
+        return inferred != null ? inferred : "";
+    }
+
+    /**
+     * Sets the inferred environment for the test.
+     * @param inferred The inferred environment string.
+     */
+    public void setInferredEnvironment(String inferred) {
+        this.inferred = inferred;
+    }
+
+    /**
+     * Get the screenshot.
+     * @return The screenshot.
+     */
+    @Override
+    public EyesScreenshot getScreenshot(ICheckSettingsInternal checkSettingsInternal) {
+        return screenshot;
+    }
+
+    /**
+     * Get the title.
+     * @return The title.
+     */
+    @Override
+    protected String getTitle() {
+        return title;
+    }
+
+    @Override
+    protected String getAUTSessionId() {
+        return "";
+    }
+
+    /**
+     * See {@link #checkImage_(RegionProvider, String, boolean, ICheckSettings)}.
+     * @param regionProvider The region for which verification will be
+     *                       performed. see {@link #checkWindowBase(RegionProvider, String, boolean, int, String)}.
+     * @param image          The image to perform visual validation for.
+     * @param tag            An optional tag to be associated with the validation checkpoint.
+     * @param ignoreMismatch True if the server should ignore a negative result for the visual validation.
+     * @param checkSettings  The settings to use when checking the image.
+     * @return True if the image matched the expected output, false otherwise.
+     */
+    private boolean checkImage_(RegionProvider regionProvider,
+                                BufferedImage image,
+                                String tag,
+                                boolean ignoreMismatch,
+                                ICheckSettings checkSettings) {
+        // We verify that the image is indeed in the correct format.
+        image = ImageUtils.normalizeImageType(image);
+
+        CutProvider cutProvider = cutProviderHandler.get();
+        if (!(cutProvider instanceof NullCutProvider)) {
+            logger.verbose("cutting...");
+            image = cutProvider.cut(image);
+            debugScreenshotsProvider.save(image, "cut");
+        }
+
+        // Set the screenshot to be verified.
+        screenshot = new EyesImagesScreenshot(logger, image);
+
+        return checkImage_(regionProvider, tag, ignoreMismatch, checkSettings);
+    }
+
+
+    /**
+     * Internal function for performing an image verification for a region of
+     * a buffered image.
+     * @param regionProvider The region for which verification will be
+     *                       performed. see {@link #checkWindowBase(RegionProvider, String, boolean, int, String)}.
+     * @param tag            An optional tag to be associated with the validation checkpoint.
+     * @param ignoreMismatch True if the server should ignore a negative result for the visual validation.
+     * @param checkSettings  The settings to use when checking the image.
+     * @return True if the image matched the expected output, false otherwise.
+     */
+    private boolean checkImage_(RegionProvider regionProvider, String tag, boolean ignoreMismatch, ICheckSettings checkSettings) {
+
+        // Set the title to be linked to the screenshot.
+        title = (tag != null) ? tag : "";
+
+        ValidationInfo validationInfo = this.fireValidationWillStartEvent(tag);
+
+        MatchResult result = checkWindowBase(regionProvider, tag, ignoreMismatch, checkSettings, null);
+
+        ValidationResult validationResult = new ValidationResult();
+        validationResult.setAsExpected(result.getAsExpected());
+
+        getSessionEventHandlers().validationEnded(getAUTSessionId(), validationInfo.getValidationId(), validationResult);
+
+        return result.getAsExpected();
+    }
+
+    /**
+     * @param appName The name of the application under test.
+     */
+    public IConfigurationSetter setAppName(String appName) {
+        this.config.setAppName(appName);
+        return config;
+    }
+
+    @Override
+    public IConfigurationSetter setTestName(String testName) {
+
+        return config.setTestName(testName);
+    }
+
+    /**
+     * @return The name of the application under test.
+     */
+    public String getAppName() {
+        return config.getAppName();
+    }
+
+    @Override
+    public String getTestName() {
+        return getConfigGetter().getTestName();
+    }
+
+    /**
+     * Sets the branch in which the baseline for subsequent test runs resides.
+     * If the branch does not already exist it will be created under the
+     * specified parent branch (see {@link #setParentBranchName}).
+     * Changes to the baseline or model of a branch do not propagate to other
+     * branches.
+     * @param branchName Branch name or {@code null} to specify the default branch.
+     */
+    public IConfigurationSetter setBranchName(String branchName) {
+        this.config.setBranchName(branchName);
+        return config;
+    }
+
+    @Override
+    public IConfigurationSetter setAgentId(String agentId) {
+
+        return config;
+    }
+
+    /**
+     * @return The current branch (see {@link #setBranchName(String)}).
+     */
+    public String getBranchName() {
+        return config.getBranchName();
+    }
+
+    @Override
+    public String getAgentId() {
+        return null;
+    }
+
+    /**
+     * Sets the branch under which new branches are created. (see {@link
+     * #setBranchName(String)}.
+     * @param branchName Branch name or {@code null} to specify the default branch.
+     */
+    public IConfigurationSetter setParentBranchName(String branchName) {
+        this.config.setParentBranchName(branchName);
+        return config;
+    }
+
+    /**
+     * @return The name of the current parent branch under which new branches
+     * will be created. (see {@link #setParentBranchName(String)}).
+     */
+    public String getParentBranchName() {
+        return config.getParentBranchName();
+    }
+
+    /**
+     * Sets the branch under which new branches are created. (see {@link
+     * #setBranchName(String)}.
+     * @param branchName Branch name or {@code null} to specify the default branch.
+     */
+    public IConfigurationSetter setBaselineBranchName(String branchName) {
+        this.config.setBaselineBranchName(branchName);
+        return config;
+    }
+
+    /**
+     * @return The name of the current parent branch under which new branches
+     * will be created. (see {@link #setBaselineBranchName(String)}).
+     */
+    public String getBaselineBranchName() {
+        return config.getBaselineBranchName();
+    }
+
+    /**
+     * Automatically save differences as a baseline.
+     * @param saveDiffs Sets whether to automatically save differences as baseline.
+     */
+    public IConfigurationSetter setSaveDiffs(Boolean saveDiffs) {
+        this.config.setSaveDiffs(saveDiffs);
+        return config;
+    }
+
+    /**
+     * Returns whether to automatically save differences as a baseline.
+     * @return Whether to automatically save differences as baseline.
+     */
+    public Boolean getSaveDiffs() {
+        return this.config.getSaveDiffs();
+    }
+
+    /**
+     * Sets the maximum time (in ms) a match operation tries to perform a match.
+     * @param ms Total number of ms to wait for a match.
+     */
+    public IConfigurationSetter setMatchTimeout(int ms) {
+        final int MIN_MATCH_TIMEOUT = 500;
+        if (getIsDisabled()) {
+            logger.verbose("Ignored");
+            return config;
+        }
+
+        logger.verbose("Setting match timeout to: " + ms);
+        if ((ms != 0) && (MIN_MATCH_TIMEOUT > ms)) {
+            throw new IllegalArgumentException("Match timeout must be set in milliseconds, and must be > " +
+                    MIN_MATCH_TIMEOUT);
+        }
+
+        this.config.setMatchTimeout(ms);
+
+        return config;
+    }
+
+    /**
+     * @return The maximum time in ms {@link #checkWindowBase
+     * (RegionProvider, String, boolean, int)} waits for a match.
+     */
+    public int getMatchTimeout() {
+        return this.config.getMatchTimeout();
+    }
+
+    /**
+     * Set whether or not new tests are saved by default.
+     * @param saveNewTests True if new tests should be saved by default. False otherwise.
+     */
+    public IConfigurationSetter setSaveNewTests(boolean saveNewTests) {
+        this.config.setSaveNewTests(saveNewTests);
+        return config;
+    }
+
+    /**
+     * @return True if new tests are saved by default.
+     */
+    public boolean getSaveNewTests() {
+        return config.getSaveNewTests();
+    }
+
+    /**
+     * Set whether or not failed tests are saved by default.
+     * @param saveFailedTests True if failed tests should be saved by default, false otherwise.
+     */
+    public IConfigurationSetter setSaveFailedTests(boolean saveFailedTests) {
+        this.config.setSaveFailedTests(saveFailedTests);
+        return config;
+    }
+
+    /**
+     * @return True if failed tests are saved by default.
+     */
+    public boolean getSaveFailedTests() {
+        return config.getSaveFailedTests();
+    }
+
+    /**
+     * Sets the batch in which context future tests will run or {@code null}
+     * if tests are to run standalone.
+     * @param batch The batch info to set.
+     */
+    public IConfigurationSetter setBatch(BatchInfo batch) {
+        if (getIsDisabled()) {
+            logger.verbose("Ignored");
+            return config;
+        }
+
+        logger.verbose("setBatch(" + batch + ")");
+
+        this.config.setBatch(batch);
+        return config;
+    }
+
+    @Override
+    protected <T extends IConfigurationGetter> T getConfigGetter() {
+        return (T) config;
+    }
+
+    @Override
+    protected <T extends IConfigurationSetter> T getConfigSetter() {
+        return (T) config;
+    }
+
+    /**
+     * @return The currently set batch info.
+     */
+    public BatchInfo getBatch() {
+        return config.getBatch();
+    }
+
+
+    /**
+     * Updates the match settings to be used for the session.
+     * @param defaultMatchSettings The match settings to be used for the session.
+     */
+    public IConfigurationSetter setDefaultMatchSettings(ImageMatchSettings
+                                                defaultMatchSettings) {
+        ArgumentGuard.notNull(defaultMatchSettings, "defaultMatchSettings");
+        config.setDefaultMatchSettings(defaultMatchSettings);
+        return config;
+    }
+
+    /**
+     * @return The match settings used for the session.
+     */
+    public ImageMatchSettings getDefaultMatchSettings() {
+        return config.getDefaultMatchSettings();
+    }
+
+    /**
+     * This function is deprecated. Please use {@link #setDefaultMatchSettings} instead.
+     * <p>
+     * The test-wide match level to use when checking application screenshot
+     * with the expected output.
+     * @param matchLevel The match level setting.
+     * @return The match settings used for the session.
+     * @see com.applitools.eyes.MatchLevel
+     */
+    public IConfigurationSetter setMatchLevel(MatchLevel matchLevel) {
+        config.getDefaultMatchSettings().setMatchLevel(matchLevel);
+        return config;
+    }
+
+    @Override
+    public IConfigurationSetter setIgnoreDisplacements(boolean isIgnoreDisplacements) {
+        this.config.setIgnoreDisplacements(isIgnoreDisplacements);
+        return config;
+    }
+
+    /**
+     * @return The test-wide match level.
+     * @deprecated Please use{@link #getDefaultMatchSettings} instead.
+     */
+    public MatchLevel getMatchLevel() {
+        return config.getDefaultMatchSettings().getMatchLevel();
+    }
+
+    @Override
+    public boolean getIgnoreDisplacements() {
+        return config.getIgnoreDisplacements();
+    }
+
+    /**
+     * @return Whether to ignore or the blinking caret or not when comparing images.
+     */
+    public boolean getIgnoreCaret() {
+        Boolean ignoreCaret = config.getDefaultMatchSettings().getIgnoreCaret();
+        return ignoreCaret == null ? true : ignoreCaret;
+    }
+
+    /**
+     * Sets the ignore blinking caret value.
+     * @param value The ignore value.
+     */
+    public IConfigurationSetter setIgnoreCaret(boolean value) {
+        config.getDefaultMatchSettings().setIgnoreCaret(value);
+        return config;
+    }
+
+    /**
+     * Returns the stitching overlap in pixels.
+     */
+    public int getStitchOverlap() {
+        return config.getStitchOverlap();
+    }
+
+    /**
+     * Sets the stitching overlap in pixels.
+     * @param pixels The width (in pixels) of the overlap.
+     */
+    public IConfigurationSetter setStitchOverlap(int pixels) {
+        this.config.setStitchOverlap(pixels);
+        return config;
+    }
+
+    /**
+     * @param hostOS The host OS running the AUT.
+     */
+    public IConfigurationSetter setHostOS(String hostOS) {
+
+        logger.log("Host OS: " + hostOS);
+
+        if (hostOS == null || hostOS.isEmpty()) {
+            this.config.setHostOS(null);
+        } else {
+            config.setHostOS(hostOS.trim());
+        }
+        return config;
+    }
+
+    /**
+     * @return get the host OS running the AUT.
+     */
+    public String getHostOS() {
+        return config.getHostOS();
+    }
+
+    /**
+     * @param hostApp The application running the AUT (e.g., Chrome).
+     */
+    public IConfigurationSetter setHostApp(String hostApp) {
+
+        logger.log("Host App: " + hostApp);
+
+        if (hostApp == null || hostApp.isEmpty()) {
+            this.config.setHostApp(null);
+        } else {
+            this.config.setHostApp(hostApp.trim());
+        }
+        return config;
+    }
+
+    /**
+     * @return The application name running the AUT.
+     */
+    public String getHostApp() {
+        return config.getHostApp();
+    }
+
+    /**
+     * @param baselineName If specified, determines the baseline to compare
+     *                     with and disables automatic baseline inference.
+     * @deprecated Only available for backward compatibility. See {@link #setBaselineEnvName(String)}.
+     */
+    public void setBaselineName(String baselineName) {
+        setBaselineEnvName(baselineName);
+    }
+
+    /**
+     * @return The baseline name, if specified.
+     * @deprecated Only available for backward compatibility. See {@link #getBaselineEnvName()}.
+     */
+    @SuppressWarnings("UnusedDeclaration")
+    public String getBaselineName() {
+        return getBaselineEnvName();
+    }
+
+    /**
+     * If not {@code null}, determines the name of the environment of the baseline.
+     * @param baselineEnvName The name of the baseline's environment.
+     */
+    public IConfigurationSetter setBaselineEnvName(String baselineEnvName) {
+
+        logger.log("Baseline environment name: " + baselineEnvName);
+
+        if (baselineEnvName == null || baselineEnvName.isEmpty()) {
+            this.config.setBaselineEnvName(null);
+        } else {
+            this.config.setBaselineEnvName(baselineEnvName.trim());
+        }
+        return config;
+    }
+
+    @Override
+    public IConfigurationSetter setEnvironmentName(String environmentName) {
+        return config;
+    }
+
+    /**
+     * If not {@code null}, determines the name of the environment of the baseline.
+     * @return The name of the baseline's environment, or {@code null} if no such name was set.
+     */
+    public String getBaselineEnvName() {
+        return config.getBaselineEnvName();
+    }
+
+    @Override
+    public String getEnvironmentName() {
+        return null;
+    }
+
+
+    /**
+     * If not {@code null} specifies a name for the environment in which the application under test is running.
+     * @param envName The name of the environment of the baseline.
+     */
+    public void setEnvName(String envName) {
+
+        logger.log("Environment name: " + envName);
+
+        if (envName == null || envName.isEmpty()) {
+            this.config.setEnvironmentName(null);
+        } else {
+            this.config.setEnvironmentName(envName.trim());
+        }
+    }
+
+    /**
+     * If not {@code null} specifies a name for the environment in which the application under test is running.
+     * @return The name of the environment of the baseline, or {@code null} if no such name was set.
+     */
+    public String getEnvName() {
+        return config.getEnvironmentName();
+    }
+
+
+    /**
+     * Superseded by {@link #setHostOS(String)} and {@link #setHostApp(String)}.
+     * Sets the OS (e.g., Windows) and application (e.g., Chrome) that host the application under test.
+     * @param hostOS  The name of the OS hosting the application under test or {@code null} to auto-detect.
+     * @param hostApp The name of the application hosting the application under test or {@code null} to auto-detect.
+     */
+    @Deprecated
+    public void setAppEnvironment(String hostOS, String hostApp) {
+        if (getIsDisabled()) {
+            logger.verbose("Ignored");
+            return;
+        }
+
+        logger.log("Warning: SetAppEnvironment is deprecated! Please use 'setHostOS' and 'setHostApp'");
+
+        logger.verbose("setAppEnvironment(" + hostOS + ", " + hostApp + ")");
+        setHostOS(hostOS);
+        setHostApp(hostApp);
+    }
+
+    @Override
+    public String getApiKey() {
+        return super.getApiKey();
+    }
+
+    public Configuration getConfiguration() {
+        return config;
+    }
+
+    public void setConfiguration(Configuration config) {
+        this.config = config;
+    }
+}

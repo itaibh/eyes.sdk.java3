@@ -79,6 +79,7 @@
         <module>eyes.connectivity.java.jersey2x</module>
         <module>eyes.sdk.core</module>
         <module>eyes.selenium.java</module>
+        <module>eyes.images.java</module>
     </modules>
 
     <distributionManagement>
