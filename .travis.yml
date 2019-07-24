@@ -2,6 +2,8 @@ language: java
 
 jdk: oraclejdk8
 
+dist: trusty
+
 script:
   - export APPLITOOLS_BATCH_ID=`uuidgen -t`
   - echo $APPLITOOLS_BATCH_ID
