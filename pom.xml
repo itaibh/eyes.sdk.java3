@@ -76,6 +76,7 @@
     <modules>
         <module>ApplitoolsTest</module>
         <module>eyes.common.java</module>
+        <module>eyes.connectivity.java.jersey2x</module>
     </modules>
 
     <distributionManagement>
