@@ -75,6 +75,7 @@
 
     <modules>
         <module>ApplitoolsTest</module>
+        <module>eyes.common.java</module>
     </modules>
 
     <distributionManagement>
